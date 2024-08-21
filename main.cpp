@@ -42,10 +42,12 @@ int main() {
     case EOI:
         cout << tkLib[(int)tmp.tkType] << endl;
         break;
+    case NONETK:
+        cout << "none" << endl;
 
     default:
         break;
     }
-    } while (tmp.tkType != EOI);
+    } while (tmp.tkType != EOI && tmp.tkType != NONETK);
     return 0;
 }

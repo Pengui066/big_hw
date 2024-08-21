@@ -7,11 +7,11 @@ OBJ = $(patsubst %.cpp, %.o, $(SRC))
 CXXFLAGS = -c -Wall
 
 $(TARGET): $(OBJ)
-	$(CXX) -o $@ $^
+	$(CXX) -o main $^
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $<
 
 .PHONY: clean
 clean:
-	del *.o $(TARGET).exe
+	del *.o main.exe
