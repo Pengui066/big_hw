@@ -1,10 +1,11 @@
-#pragma once
+#ifndef __LEXER_H__
+#define __LEXER_H__
 #include<iostream>
 #include<string>
 #include<cctype>
 #include<cstring>
 #define UNFINISHED 0
-#define ASSERT(x) if (!(x)) __debugbreak();
+#define ASSERT(x) if (!(x)) __debugbreak()
 
 enum OPTYPE // 记录操作符种类的枚举类型
 {
@@ -21,6 +22,9 @@ enum TKTYPE // 记录token种类的枚举类型
     SEMICOLON, QUESTIONMARK, COLON, EVA, LBRACKET, RBRACKET, EOI
 };
 
+extern const char* opLib[];
+extern const char* tkLib[];
+
 struct Token
 {
     TKTYPE tkType;
@@ -30,15 +34,20 @@ struct Token
         char idName[20];
         OPTYPE opType;
     };
-    Token():tkType(TKTYPE::NONETK), intValue(0) {}
-    bool is_NONETK() { return this->tkType == NONETK; } // 判断是否为空字符的函数
+    Token():tkType(TKTYPE::NONETK), intValue(0) {} // 默认构造函数
+    Token(int _value): tkType(INTEGER), intValue(_value) {} // 整数类型Token的构造函数
+    Token(OPTYPE _opType): tkType(OPERATOR), opType(_opType) {} // 运算符类型Token的构造函数
+    Token(const char * _idName): tkType(IDENTIFIER) {strcpy(idName, _idName);} // 标识符类型的构造函数
+    Token(TKTYPE _tkType): tkType(_tkType), intValue(0) {} // 其它类型的构造函数
+    Token(const Token& _tk);
+    bool is_NONETK() const { return this->tkType == NONETK; } // 判断是否为空字符的函数
 };
 
 class Lexer
 {
 private:
+    Token tkBuffer;
     char preChar;
-    char opBuffer;
     void skipBlank();
     bool isalphaUl(char _char) {
         return isalpha(_char) || _char == '_';
@@ -65,6 +74,16 @@ private:
         || _char == ')';
     }
 public:
+    void clearTokenBuffer() {
+        tkBuffer.tkType = NONETK;
+    }
     Token getToken();
+    Token getNextToken();
     Lexer();
+    void speakNextToken();
 };
+
+bool is_cmpOP(OPTYPE _op);
+
+
+#endif

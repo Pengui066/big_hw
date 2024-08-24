@@ -1,16 +1,16 @@
 ## VER 4
 CXX = g++
-TARGET = big_hw
+TARGET = main
 SRC = $(wildcard *.cpp)
-OBJ = $(patsubst %.cpp, %.o, $(SRC))
+OBJ = $(SRC:.cpp=.o)
 
-CXXFLAGS = -c -Wall
+CXXFLAGS = -g -Wall
 
 $(TARGET): $(OBJ)
-	$(CXX) -o main $^
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $^
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) $<
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:

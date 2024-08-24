@@ -1,53 +1,34 @@
-#include "Lexer.h"
+#include "Parser.h"
 
-using std::cout; using std::endl;
-Lexer lexer;
-const char* opLib[] = {"NONEOP", "EQUAL", "GREATER", "LESS", "PLUS", "MINUS", "TIMES", "DIVIDEBY", "MODULUS", "AND", "OR", "NOT"};
-const char* tkLib[] = {"NONETK", "INTEGER", "IDENTIFIER", "OPERATOR", "SEMICOLON", "QUESTIONMARK", "COLON", "EVA", "LBRACKET", "RBRACKET", "EOI"};
+using namespace std;
 
+Parser parser;
 
 int main() {
-    Token tmp;
-    do {
-    tmp = lexer.getToken();
-    switch (tmp.tkType)
-    {
-    case IDENTIFIER:
-        cout << "identifier, " << tmp.idName << endl;
-        break;
-    case INTEGER:
-        cout << "integer, " << tmp.intValue << endl;
-        break;
-    case OPERATOR:
-        cout << "operator, " << opLib[(int)tmp.opType] << endl;
-        break;
-    case SEMICOLON:
-        cout << tkLib[(int)tmp.tkType] << " ;" << endl;
-        break;
-    case COLON:
-        cout << tkLib[(int)tmp.tkType] << " :" << endl;
-        break;
-    case QUESTIONMARK:
-        cout << tkLib[(int)tmp.tkType] << " ?" << endl;
-        break;
-    case EVA:
-        cout << tkLib[(int)tmp.tkType] << " =" << endl;
-        break;
-    case LBRACKET:
-        cout << tkLib[(int)tmp.tkType] << " (" << endl;
-        break;
-    case RBRACKET:
-        cout << tkLib[(int)tmp.tkType] << " )" << endl;
-        break;
-    case EOI:
-        cout << tkLib[(int)tmp.tkType] << endl;
-        break;
-    case NONETK:
-        cout << "none" << endl;
-
-    default:
-        break;
+for( Token mainTk = lexer.getToken(); 
+    mainTk.tkType == IDENTIFIER; 
+    mainTk = lexer.getToken() )
+{
+    if (!strcmp(mainTk.idName, "output")) {
+        output outputObj(parser.parseExpr());
+        if (lexer.getNextToken().tkType != SEMICOLON) {
+            cerr << "error: output: missing semicolon. \n";
+            break;
+        }
+        outputObj.execute();
     }
-    } while (tmp.tkType != EOI && tmp.tkType != NONETK);
-    return 0;
+    else if (lexer.getToken().tkType == EVA) {
+        assignment assignObj(parser.parseExpr(), mainTk.idName);
+        if (lexer.getNextToken().tkType != SEMICOLON) {
+        cerr << "error: eva: missing semicolon. \n";
+        break;
+        }
+        assignObj.execute();
+    }
+    else {
+        std::cerr << "error: from func \"main\", not \'=\' after identifier. \n";
+    }
+}
+cout << "over.";
+return 0;
 }

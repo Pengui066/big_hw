@@ -4,23 +4,33 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "make",
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
+            "group": {
+                "kind": "build",
+                "isDefault": true
             },
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "detail": "F5 Makefile 生成的任务。"
+            "command": "powershell",
+            "args": [
+                "-c",
+                "mingw32-make"
+            ]
+        },
+        {
+            "label": "build & run",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-c",
+                "'mingw32-make run'"
+            ]
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-c",
+                "'mingw32-make clean'"
+            ]
         }
     ]
 }
