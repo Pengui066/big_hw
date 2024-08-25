@@ -10,7 +10,7 @@ for( Token mainTk = lexer.getToken();
     mainTk = lexer.getToken() )
 {
     if (!strcmp(mainTk.idName, "output")) {
-        output outputObj(parser.parseExpr());
+        output outputObj(parser.parseTresExpr());
         if (lexer.getNextToken().tkType != SEMICOLON) {
             cerr << "error: output: missing semicolon. \n";
             break;
@@ -18,7 +18,7 @@ for( Token mainTk = lexer.getToken();
         outputObj.execute();
     }
     else if (lexer.getToken().tkType == EVA) {
-        assignment assignObj(parser.parseExpr(), mainTk.idName);
+        assignment assignObj(parser.parseTresExpr(), mainTk.idName);
         if (lexer.getNextToken().tkType != SEMICOLON) {
         cerr << "error: eva: missing semicolon. \n";
         break;

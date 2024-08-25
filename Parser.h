@@ -6,6 +6,20 @@
 #include <iostream>
 #include "Lexer.h"
 
+/*
+运算符优先级：
+* ()
+* - !
+* * / %
+* + -
+* > <
+* ==
+* &&
+* ||
+* ?:
+* =
+*/
+
 extern std::map<std::string, int> varMap; // 用来记录
 extern Lexer lexer;
 
@@ -63,10 +77,9 @@ public:
 class Parser
 {
 public:
-    expression* parseExpr();
-    expression* parseExpr1();
-    expression* parseExpr2();
-    expression* parseExpr3();
+    expression* parseTresExpr();
+    expression* parseDosExpr(int SEQNUM); // 接受一个参数用来表示当前二元表达式的优先层级
+    expression* parseUnoExpr();
 };
 
 class statement // statement 虚基类
@@ -96,6 +109,14 @@ public:
     void execute();
 };
 
+inline bool isL0op(const Token& _tk); // - !
+inline bool isL1op(const Token& _tk); // * / %
+inline bool isL2op(const Token& _tk); // + -
+inline bool isL3op(const Token& _tk); // > <
+inline bool isL4op(const Token& _tk); // ==
+inline bool isL5op(const Token& _tk); // &&
+inline bool isL6op(const Token& _tk); // ||
 
-
+typedef bool (*judgeOpFP) (const Token&);
+extern judgeOpFP judgeFuncList[];
 #endif

@@ -85,7 +85,7 @@ public:
     void speakNextToken();
 };
 
-bool is_cmpOP(OPTYPE _op);
+inline bool is_cmpOP(OPTYPE _op);
 
 
 #endif
