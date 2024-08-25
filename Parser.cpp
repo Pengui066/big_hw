@@ -33,7 +33,7 @@ expression *Parser::parseTresExpr()
         expression* condExp = new tresExp(expr1, branch1, branch2);
         return condExp; // 后置条件：在TokenBuffer里面留下一个非operator的Token，这个Token很可能是“右括号”或者“分号”
     }
-    else { return expr1; } // 读完一个完整的表达式1后返回的后置条件：在TokenBuffer里面留下一个非比较符号的Token，当然也可以知道这个符号非“加减乘除模”
+    else { return expr1; } 
 }
 
 // SEQNUM代表当前parse的表达式的运算优先级，数字越小优先级越高
@@ -62,7 +62,6 @@ expression *Parser::parseUnoExpr()
 {
     Token tkAfterOp = lexer.getToken();
     ASSERT(tkAfterOp.opType == MINUS || tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER || tkAfterOp.tkType == LBRACKET || tkAfterOp.opType == NOT);
-    // TODO: 完善以上四种情况的分支 先不加与或非
     if (tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER) { // 标识符或者整数的情况，这种情况TokenBuffer被清空，之所以放前面是因为它的覆盖面最广，可以避免integer值等于5然后被误判为减号的情况
         expression *expr = new baseExp(tkAfterOp);
         return expr;
