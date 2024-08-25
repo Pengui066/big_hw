@@ -19,7 +19,7 @@ enum TKTYPE // 记录token种类的枚举类型
 {
     NONETK,
     INTEGER, IDENTIFIER, OPERATOR,
-    SEMICOLON, QUESTIONMARK, COLON, EVA, LBRACKET, RBRACKET, EOI
+    SEMICOLON, QUESTIONMARK, COLON, EVA, LBRACKET, RBRACKET, LBRACE, RBRACE, EOI
 };
 
 extern const char* opLib[];
@@ -71,7 +71,9 @@ private:
         || _char == '?'
         || _char == ':'
         || _char == '('
-        || _char == ')';
+        || _char == ')'
+        || _char == '{'
+        || _char == '}';
     }
 public:
     void clearTokenBuffer() {

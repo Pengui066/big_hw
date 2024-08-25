@@ -6,7 +6,8 @@ Lexer lexer;
 
 void assignment::execute()
 {
-    varMap[varName] = exp->evaluate();
+    varMap[varName] = exp->evaluate(); 
+    // 每个expression *exp 指向的都是expression类的子类对象，每个evaluate函数的执行方式都不一样，体现一种多态
     delete exp;
 }
 
@@ -25,6 +26,8 @@ expression *Parser::parseExpr()
         expression* expr2 = parseExpr1(); // 比较表达式的右侧运算分量
         Token tk2 = lexer.getNextToken();
         //! 规定中一个比较表达式求值似乎不能单独出现
+        //! 所以a = (1+2 == 3)?1:2;的写法是非法的
+        //todo: 在函数指针版本的parseExpr里面把这个改掉，让比较表达式可以单独出现，并且让三目的条件里面可以方任何表达式
         if (tk2.tkType != QUESTIONMARK) {
             std::cerr << "error: form func \"parseExpr\", missing expected questionMark. " << std::endl;
             ASSERT(0);
@@ -78,7 +81,7 @@ expression *Parser::parseExpr3()
     Token tkAfterOp = lexer.getToken();
     ASSERT(tkAfterOp.opType == MINUS || tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER || tkAfterOp.tkType == LBRACKET);
     // TODO: 完善以上四种情况的分支 先不加与或非
-    if (tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER) { // 标识符或者整数的情况，这种情况TokenBuffer被清空
+    if (tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER) { // 标识符或者整数的情况，这种情况TokenBuffer被清空，之所以放前面是因为它的覆盖面最广，可以避免integer值等于5然后被误判为减号的情况
         expression *expr = new baseExp(tkAfterOp);
         return expr;
     }

@@ -1,7 +1,7 @@
 #include "Lexer.h"
 
 const char* opLib[] = {"NONEOP", "EQUAL", "GREATER", "LESS", "PLUS", "MINUS", "TIMES", "DIVIDEBY", "MODULUS", "AND", "OR", "NOT"};
-const char* tkLib[] = {"NONETK", "INTEGER", "IDENTIFIER", "OPERATOR", "SEMICOLON", "QUESTIONMARK", "COLON", "EVA", "LBRACKET", "RBRACKET", "EOI"};
+const char* tkLib[] = {"NONETK", "INTEGER", "IDENTIFIER", "OPERATOR", "SEMICOLON", "QUESTIONMARK", "COLON", "EVA", "LBRACKET", "RBRACKET", "LBRACE", "RBRACE", "EOI"};
 
 void Lexer::skipBlank()
 {
@@ -99,6 +99,8 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
         if (preChar == ':') {preChar = std::cin.get(); return COLON; }
         if (preChar == '(') {preChar = std::cin.get(); return LBRACKET; }
         if (preChar == ')') {preChar = std::cin.get(); return RBRACKET; }
+        if (preChar == '{') {preChar = std::cin.get(); return LBRACE; }
+        if (preChar == '}') {preChar = std::cin.get(); return RBRACE; }
         if (preChar == '+') {preChar = std::cin.get(); return PLUS; }
         if (preChar == '-') {preChar = std::cin.get(); return MINUS; }
         if (preChar == '*') {preChar = std::cin.get(); return TIMES; }
@@ -157,6 +159,12 @@ void Lexer::speakNextToken()
         break;
     case RBRACKET:
         std::cout << tkLib[(int)tmp.tkType] << ", )" << std::endl;
+        break;
+    case LBRACE:
+        std::cout << tkLib[(int)tmp.tkType] << ", {" << std::endl;
+        break;
+    case RBRACE:
+        std::cout << tkLib[(int)tmp.tkType] << ", }" << std::endl;
         break;
     case EOI:
         std::cout << tkLib[(int)tmp.tkType] << std::endl;
