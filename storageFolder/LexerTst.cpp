@@ -1,10 +1,7 @@
 #include "Lexer.h"
+#include "Parser.h"
 
 using std::cout; using std::endl;
-Lexer lexer;
-const char* opLib[] = {"NONEOP", "EQUAL", "GREATER", "LESS", "PLUS", "MINUS", "TIMES", "DIVIDEBY", "MODULUS", "AND", "OR", "NOT"};
-const char* tkLib[] = {"NONETK", "INTEGER", "IDENTIFIER", "OPERATOR", "SEMICOLON", "QUESTIONMARK", "COLON", "EVA", "LBRACKET", "RBRACKET", "EOI"};
-
 
 int main() {
     Token tmp;
@@ -38,6 +35,12 @@ int main() {
         break;
     case RBRACKET:
         cout << tkLib[(int)tmp.tkType] << ", )" << endl;
+        break;
+    case LBRACE:
+        std::cout << tkLib[(int)tmp.tkType] << ", {" << std::endl;
+        break;
+    case RBRACE:
+        std::cout << tkLib[(int)tmp.tkType] << ", }" << std::endl;
         break;
     case EOI:
         cout << tkLib[(int)tmp.tkType] << endl;

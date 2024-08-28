@@ -1,6 +1,7 @@
 #include "Parser.h"
 
-std::map<std::string, int> varMap; // 用来记录
+std::map<std::string, int> varMap; // 用来记录变量
+std::map<std::string, int> funcList; 
 
 Lexer lexer;
 
@@ -11,7 +12,7 @@ void assignment::execute()
     delete exp;
 }
 
-void output::execute()
+void outputStat::execute()
 {
     std::cout << exp->evaluate() << std::endl;
     delete exp;
@@ -25,8 +26,9 @@ expression *Parser::parseTresExpr()
         expression* branch1 = parseDosExpr(6);
         Token tk2 = lexer.getNextToken();
         if (tk2.tkType != COLON) {
-            std::cerr << "error: form func \"parseExpr\", missing expected colon. " << std::endl;
-            ASSERT(0);
+            std::string errMessage = "from ternary expression, missing expected colon, but found ";
+            errMessage += tk2.nameItself();
+            RaiseErr(WRONG_GRAMMAR, errMessage);
             return nullptr;
         }
         expression* branch2 = parseDosExpr(6);
@@ -87,6 +89,103 @@ expression *Parser::parseUnoExpr()
     return nullptr;
 }
 
+statement* Parser::parseFuncDef()
+{
+    Token firstTk = lexer.getNextToken();
+    if (firstTk.tkType == IDENTIFIER) {
+        if (!(strcmp(firstTk.idName, "def"))) { // 函数定义语句
+            Token funcName = lexer.getTk_ensureType(IDENTIFIER);
+            lexer.getTk_ensureType(LBRACKET);
+            lexer.getTk_ensureType(RBRACKET);
+            statement* body = UNFINISHED;
+            return new func_definition(funcName.idName, body);
+        }
+    }
+    RaiseErr(WRONG_GRAMMAR, "'def'", firstTk.nameItself());
+    return nullptr;
+}
+
+statement* Parser::parseVarDef()
+{
+    Token firstTk = lexer.getNextToken();
+    if (firstTk.tkType != IDENTIFIER || strcmp(firstTk.idName, "var")) { // 变量定义语句
+    Token expectedVarName = lexer.getTk_ensureType(IDENTIFIER);
+    lexer.getTk_ensureType(SEMICOLON);
+    return new var_definition(expectedVarName.idName);
+    }
+    RaiseErr(WRONG_GRAMMAR, "'var'", firstTk.nameItself());
+    return nullptr;
+}
+
+statement* Parser::parseNotDefStat() // 读取分析不是变量声明/函数定义的语句
+{
+    Token firstTk = lexer.getNextToken();
+    if (firstTk.tkType == IDENTIFIER) {
+        if (!(strcmp(firstTk.idName, "if"))) { // 条件语句
+            lexer.getTk_ensureType(LBRACKET); // 拿左括号
+            expression* condExpr = parseTresExpr(); // 判断条件表达式，后置条件是在TokenBuffer里面留下一个右括号
+            lexer.getNxtTk_ensureType(RBRACKET); // 拿右括号
+            statement* ifBranch = parseNotDefStat(); // if分支
+            Token expectedElse = lexer.getNextToken(); 
+            if (expectedElse.tkType != IDENTIFIER || strcmp(expectedElse.idName, "else")) {
+                statement* elseBranch = new voidStat;
+                return new ifStat(condExpr, ifBranch, elseBranch); // 后置条件：在TokenBuffer里面留下一个非else的Token
+            }
+            lexer.clearTokenBuffer();
+            statement* elseBranch = parseNotDefStat(); // 后置条件视情况而定
+            return new ifStat(condExpr, ifBranch, elseBranch);
+        }
+        if (!(strcmp(firstTk.idName, "while"))) { // 循环语句
+            lexer.getTk_ensureType(LBRACKET); // 拿左括号
+            expression* condExpr = parseTresExpr(); // 循环条件，后置条件是在TokenBuffer里面留下一个右括号
+            lexer.getNxtTk_ensureType(RBRACKET); // 拿右括号
+            statement* bodyStat = parseNotDefStat(); // 后置条件视情况而定
+            return new whileStat(condExpr, bodyStat);
+        }
+        if (!(strcmp(firstTk.idName, "output"))) { // 输出语句
+            expression* expr = parseTresExpr();
+            lexer.getNxtTk_ensureType(SEMICOLON); // getNxtTk_ensureType之后默认清空TokenBuffer，所以后置条件是在TokenBuffer留下NONETK
+            return new outputStat(expr);
+        }
+        if (!(strcmp(firstTk.idName, "input"))) { // 输入语句
+            Token expcIdTk = lexer.getTk_ensureType(IDENTIFIER);
+            lexer.getTk_ensureType(SEMICOLON); // 后置条件TokenBuffer是NONETK
+            return new inputStat(expcIdTk.idName);
+        }
+        if (!(strcmp(firstTk.idName, "return"))) { // 返回语句
+
+        }
+        Token SecondTk = lexer.getToken();
+        if (SecondTk.tkType == LBRACKET) {
+            lexer.getTk_ensureType(RBRACKET);
+            lexer.getTk_ensureType(SEMICOLON);
+            auto it = funcList.find(firstTk.idName);
+            if (it == funcList.end()) RaiseErr(UNDEFINED_FUNC, firstTk.idName);
+            return new funcCall(firstTk.idName); int x = UNFINISHED;
+        }
+        if (SecondTk.tkType == EVA) {
+            auto it = varMap.find(firstTk.idName);
+            if (it == varMap.end()) RaiseErr(UNDEFINED_VAR, firstTk.idName);
+            expression* expr = parseTresExpr();
+            lexer.getNxtTk_ensureType(SEMICOLON);
+            return new assignment(expr, firstTk.idName);
+        }
+        RaiseErr(WRONG_GRAMMAR, "wrong input, neither function call, nor variable assignment. ");
+    }
+    else if (firstTk.tkType == LBRACE) {
+        lexer.clearTokenBuffer();
+        compoundStat* compoundStatPtr = new compoundStat; // 先创建一个复合语句的对象
+        do {
+            statement* statPtr = parseNotDefStat();
+            compoundStatPtr->addStatement(statPtr);
+        } while (lexer.getNextToken().tkType != RBRACE); // 退出的时候TokenBuffer留一个右大括号
+        lexer.clearTokenBuffer(); // 后置条件：TokenBuffer置空
+        return compoundStatPtr;
+    }
+    RaiseErr(WRONG_GRAMMAR, "statement identifiers or '{'", firstTk.nameItself());
+    return nullptr;
+}
+
 int unoExp::evaluate()
 {
     if (this->op == NONEOP) return Opnd->evaluate();
@@ -113,8 +212,7 @@ int dosExp::evaluate()
     if (this->op == LESS) return ((lOpnd->evaluate()) < (rOpnd->evaluate()));
     if (this->op == AND) return ((lOpnd->evaluate()) && (rOpnd->evaluate()));
     if (this->op == OR) return ((lOpnd->evaluate()) || (rOpnd->evaluate()));
-    std::cerr << "error: from func \"dosExp::evaluate()\", unknown operator in dosExp. " << std::endl;
-    ASSERT(0);
+    ASSERT(0); // unknown operator in dosExp.
     return 0;
 }
 
@@ -184,3 +282,44 @@ inline bool isL6op(const Token& _tk) { // ||
 }
 
 judgeOpFP judgeFuncList[] = {isL0op, isL1op, isL2op, isL3op, isL4op, isL5op, isL6op};
+
+void func_definition::execute()
+{
+}
+
+void var_definition::execute()
+{
+}
+
+void ifStat::execute()
+{
+}
+
+void whileStat::execute()
+{
+}
+
+void compoundStat::addStatement(statement *_statPtr)
+{
+    statList.push_back(_statPtr);
+}
+
+void compoundStat::execute()
+{
+}
+
+void inputStat::execute()
+{
+}
+
+void returnStat::execute()
+{
+}
+
+void voidStat::execute()
+{
+}
+
+void funcCall::execute()
+{
+}

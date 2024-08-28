@@ -25,10 +25,8 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
             id_tmp += ch;
         }
         if (isalphaUl(ch)) {
-            std::cout << "Numbers cannot be at the beginning of an identifier.\n";
-            while(isalnumUl(ch = std::cin.get())){}
-            preChar = ch; // 最后一个不是数字字母下划线的字符留在preChar里面
-            return Token(); // 返回空Token
+            RaiseErr(INVALID_INPUT, "numbers cannot be at the beginning of an identifier. ");
+            return Token();
         }
         // 其余情况，在数字后面不是字母下划线，说明之前这个数字token是合法的，即使后面的是未知字符，它也会在下一次getToken被拿下
         preChar = ch;
@@ -42,7 +40,8 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
             return Token();
         }
         catch(const std::out_of_range& e) {
-            std::cerr <<e.what() << '\n';
+            std::string errMessage = "integer \"" + id_tmp + "\" is out of range.";
+            RaiseErr(INT_OUT_OF_RANGE, errMessage);
             return Token();
         }
         return value_tmp; // 返回integer类型的token
@@ -74,7 +73,7 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
             ch = std::cin.get();
             if (ch != '|') {
                 preChar = ch;
-                std::cout << "unknown token: '|', invalid input.\n";
+                RaiseErr(INVALID_INPUT, "unknown token: '|', invalid input.");
                 return Token(); // 输入错误，返回空Token
             }
             else {
@@ -86,7 +85,7 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
             ch = std::cin.get();
             if (ch != '&') {
                 preChar = ch;
-                std::cout << "unknown token: '&', invalid input.\n";
+                RaiseErr(INVALID_INPUT, "unknown token: '&', invalid input.");
                 return Token(); // 输入错误，返回空Token
             }
             else {
@@ -111,20 +110,70 @@ Token Lexer::getToken() // 读取数字字母下划线混合，并判断是否�
         if (preChar == '!') {preChar = std::cin.get(); return NOT; }
         ASSERT(0);
     }
-    std::cerr << "ERROR: Invalid input: '" << preChar << "'.\n";
+    std::string errMessage = "Invalid input: '";
+    errMessage += preChar; errMessage += '\''; errMessage += '.';
+    RaiseErr(INVALID_INPUT, errMessage);
     return Token(); // 注意：遇到不认识的字符，返回空Token，但是preChar里面的未知字符会保留。
 }
 Token Lexer::getNextToken()
 {
     if (this->tkBuffer.is_NONETK()) { tkBuffer = getToken(); }
     return tkBuffer;
+}
+Token Lexer::getTk_ensureType(TKTYPE _type)
+{
+    Token expectedTk = getToken();
+    ensure(expectedTk, _type);
+    return expectedTk;
+}
+Token Lexer::getTk_ensureType(OPTYPE _type)
+{
+    Token expectedTk = getToken();
+    ensure(expectedTk, _type);
+    return expectedTk;
+}
+Token Lexer::getNxtTk_ensureType(TKTYPE _type)
+{
+    if (tkBuffer.is_NONETK()) { tkBuffer = getToken(); }
+    ensure(tkBuffer, _type);
+    Token tmp = tkBuffer;
+    clearTokenBuffer();
+    return tmp;
 };
-
+Token Lexer::getNxtTk_ensureType(OPTYPE _type)
+{
+    if (tkBuffer.is_NONETK()) { tkBuffer = getToken(); }
+    ensure(tkBuffer, _type);
+    return tkBuffer;
+};
 Lexer::Lexer(): preChar(' ') {}
 
 bool is_cmpOP(OPTYPE _op)
 {
     return _op == EQUAL || _op == GREATER || _op == LESS;
+}
+
+inline void ensure(const Token &_tk, TKTYPE _type)
+{
+if (_tk.tkType != _type) {
+    RaiseErr(WRONG_GRAMMAR, tkLib[(int)_type], _tk.nameItself());
+}
+}
+
+inline void ensure(const Token &_tk, OPTYPE _type)
+{
+if (!(_tk.tkType == OPERATOR && _tk.opType == _type)) {
+    RaiseErr(WRONG_GRAMMAR, opLib[(int)_type], _tk.nameItself());
+}
+}
+
+inline void ensure(const Token &_tk, const char* _name)
+{
+if (_tk.tkType != IDENTIFIER || strcmp(_tk.idName, _name)) {
+    std::string msg = "identifier";
+    msg += _name;
+    RaiseErr(WRONG_GRAMMAR, msg, _tk.nameItself());
+}
 }
 
 void Lexer::speakNextToken()
@@ -182,7 +231,17 @@ Token::Token(const Token &_tk) // 拷贝构造函数
     if (_tk.tkType == IDENTIFIER) {strcpy(this->idName, _tk.idName);}
     else if (_tk.tkType == OPERATOR) {this->opType = _tk.opType;}
     else {this->intValue = _tk.intValue;}
-} 
+}
+
+std::string Token::nameItself() const
+{
+    std::string name = tkLib[(int)tkType];
+    if (tkType == INTEGER) {name += " \'" + std::to_string(intValue) + "\'"; }
+    else if (tkType == IDENTIFIER) {name += " \'"; name += idName; name += "\'"; }
+    else if (tkType == OPERATOR) {name += " \'"; name += opLib[(int)opType]; name += "\'"; }
+    return name;
+}
+
 // 自己写不明白，以为普通的符号Token类型不需要拷贝union中的内容，其实不是
 // c4 = -2 * 4 * a; 这句导致了ParseExpr2函数中nextTk虽然tkType是SEMICOLON但是union中的opType是TIMIES的情况，被while循环识别为乘号继续执行
 

@@ -4,6 +4,9 @@
 #include<string>
 #include<cctype>
 #include<cstring>
+
+#include"errRaiser.h"
+
 #define UNFINISHED 0
 #define ASSERT(x) if (!(x)) __debugbreak()
 
@@ -34,12 +37,13 @@ struct Token
         char idName[20];
         OPTYPE opType;
     };
-    Token():tkType(TKTYPE::NONETK), intValue(0) {} // 默认构造函数
+    Token():tkType(TKTYPE::NONETK) {memset(idName, 0, 20);} // 默认构造函数
     Token(int _value): tkType(INTEGER), intValue(_value) {} // 整数类型Token的构造函数
     Token(OPTYPE _opType): tkType(OPERATOR), opType(_opType) {} // 运算符类型Token的构造函数
     Token(const char * _idName): tkType(IDENTIFIER) {strcpy(idName, _idName);} // 标识符类型的构造函数
     Token(TKTYPE _tkType): tkType(_tkType), intValue(0) {} // 其它类型的构造函数
     Token(const Token& _tk);
+    std::string nameItself() const;
     bool is_NONETK() const { return this->tkType == NONETK; } // 判断是否为空字符的函数
 };
 
@@ -77,15 +81,21 @@ private:
     }
 public:
     void clearTokenBuffer() {
-        tkBuffer.tkType = NONETK;
+        tkBuffer = Token();
     }
     Token getToken();
     Token getNextToken();
+    Token getTk_ensureType(TKTYPE _type);
+    Token getTk_ensureType(OPTYPE _type);
+    Token getNxtTk_ensureType(TKTYPE _type);
+    Token getNxtTk_ensureType(OPTYPE _type);
     Lexer();
     void speakNextToken();
 };
 
 inline bool is_cmpOP(OPTYPE _op);
 
-
+inline void ensure(const Token& _tk, TKTYPE _type);
+inline void ensure(const Token& _tk, OPTYPE _type);
+inline void ensure(const Token& _tk, const char* _name);
 #endif
