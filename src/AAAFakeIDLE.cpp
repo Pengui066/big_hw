@@ -16,7 +16,7 @@ if (expcDefId.tkType == IDENTIFIER) {
     }
 }
 if (expcDefId.tkType == EOI) {
-    std::cout << "found END OF INPUT, run over." << endl;
+    std::cout << "found END OF INPUT, the program has exited." << endl;
     return nullptr;
 }
 RaiseErr(WRONG_GRAMMAR, "statement identifiers", expcDefId.nameItself());
@@ -28,9 +28,9 @@ int main() {
     statement* stat = ParseStat();
     while (stat != nullptr) {
         stat->execute();
+        delete stat;
         cout << ">>> ";
         stat = ParseStat();
-        cout << "\t\t\t\t looping...\n";
     }
     auto it = funcList.begin();
     while (it != funcList.end()){
