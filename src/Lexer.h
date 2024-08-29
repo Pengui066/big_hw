@@ -7,9 +7,6 @@
 
 #include"errRaiser.h"
 
-#define UNFINISHED 0
-#define ASSERT(x) if (!(x)) __debugbreak()
-
 enum OPTYPE // 记录操作符种类的枚举类型
 {
     NONEOP, 
@@ -94,6 +91,7 @@ public:
 };
 
 inline bool is_cmpOP(OPTYPE _op);
+inline bool eqID(const Token& _tk, const char* _str) { return _tk.tkType == IDENTIFIER && !(strcmp(_tk.idName, _str));}
 
 inline void ensure(const Token& _tk, TKTYPE _type);
 inline void ensure(const Token& _tk, OPTYPE _type);

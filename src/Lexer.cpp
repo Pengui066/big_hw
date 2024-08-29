@@ -132,6 +132,7 @@ Token Lexer::getTk_ensureType(OPTYPE _type)
     ensure(expectedTk, _type);
     return expectedTk;
 }
+// 后置条件清空TokenBuffer
 Token Lexer::getNxtTk_ensureType(TKTYPE _type)
 {
     if (tkBuffer.is_NONETK()) { tkBuffer = getToken(); }

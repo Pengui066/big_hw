@@ -1,0 +1,23 @@
+var global;
+
+def factorial() {
+    var tmp;
+    tmp = 1;
+    if (global == 0) {
+        return 1;
+    }
+    else {
+        while(global) {
+            tmp = tmp * global;
+            global = global - 1;
+        }
+        return tmp;
+    }
+}
+
+def main() {
+    input global;
+    output factorial();
+}
+
+main();

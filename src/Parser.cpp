@@ -1,23 +1,9 @@
 #include "Parser.h"
 
-std::map<std::string, int> varMap; // 用来记录变量
-std::map<std::string, int> funcList; 
-
 Lexer lexer;
 
-void assignment::execute()
-{
-    varMap[varName] = exp->evaluate(); 
-    // 每个expression *exp 指向的都是expression类的子类对象，每个evaluate函数的执行方式都不一样，体现一种多态
-    delete exp;
-}
-
-void outputStat::execute()
-{
-    std::cout << exp->evaluate() << std::endl;
-    delete exp;
-}
-
+// 后置条件：在TokenBuffer里面留下一个非operator的Token，这个Token很可能是“右括号”或者“分号”
+// ------
 expression *Parser::parseTresExpr()
 {
     expression *expr1 = parseDosExpr(6); // 它应该从流里面吞掉一个完整的表达式1，保证下一个token是operator
@@ -33,13 +19,14 @@ expression *Parser::parseTresExpr()
         }
         expression* branch2 = parseDosExpr(6);
         expression* condExp = new tresExp(expr1, branch1, branch2);
-        return condExp; // 后置条件：在TokenBuffer里面留下一个非operator的Token，这个Token很可能是“右括号”或者“分号”
+        return condExp;
     }
     else { return expr1; } 
 }
 
 // SEQNUM代表当前parse的表达式的运算优先级，数字越小优先级越高
 // 递归地parse优先级更高的表达式
+// ------
 expression* Parser::parseDosExpr(int SEQNUM) { 
     ASSERT(SEQNUM >=0 && SEQNUM <= 6);
     if (SEQNUM > 0 && SEQNUM <= 6) {
@@ -64,8 +51,18 @@ expression *Parser::parseUnoExpr()
 {
     Token tkAfterOp = lexer.getToken();
     ASSERT(tkAfterOp.opType == MINUS || tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER || tkAfterOp.tkType == LBRACKET || tkAfterOp.opType == NOT);
-    if (tkAfterOp.tkType == IDENTIFIER || tkAfterOp.tkType == INTEGER) { // 标识符或者整数的情况，这种情况TokenBuffer被清空，之所以放前面是因为它的覆盖面最广，可以避免integer值等于5然后被误判为减号的情况
+    if (tkAfterOp.tkType == INTEGER) { // 标识符或者整数的情况，这种情况TokenBuffer被清空，之所以放前面是因为它的覆盖面最广，可以避免integer值等于5然后被误判为减号的情况
         expression *expr = new baseExp(tkAfterOp);
+        return expr;
+    }
+    if (tkAfterOp.tkType == IDENTIFIER) {
+        Token expcLbracket = lexer.getNextToken();
+        expression *expr;
+        if (expcLbracket.tkType == LBRACKET) {
+            lexer.getTk_ensureType(RBRACKET);
+            expr = new baseExp(tkAfterOp, 1);
+        } else {
+            expr = new baseExp(tkAfterOp, 0); }
         return expr;
     }
     if (tkAfterOp.opType == MINUS) {
@@ -93,12 +90,32 @@ statement* Parser::parseFuncDef()
 {
     Token firstTk = lexer.getNextToken();
     if (firstTk.tkType == IDENTIFIER) {
-        if (!(strcmp(firstTk.idName, "def"))) { // 函数定义语句
+        if (eqID(firstTk, "def")) { // 函数定义语句
             Token funcName = lexer.getTk_ensureType(IDENTIFIER);
             lexer.getTk_ensureType(LBRACKET);
             lexer.getTk_ensureType(RBRACKET);
-            statement* body = UNFINISHED;
-            return new func_definition(funcName.idName, body);
+            lexer.getTk_ensureType(LBRACE);
+            func_definition* funcDefPtr = new func_definition(funcName.idName);
+            
+            Token expcVar = lexer.getNextToken();
+            unsigned int idxNum = 0;
+            while (eqID(expcVar, "var")) {
+                Token expectedVarName = lexer.getTk_ensureType(IDENTIFIER);
+                lexer.getTk_ensureType(SEMICOLON);
+                funcDefPtr->addLocVar(expectedVarName.idName, idxNum);
+                idxNum++;
+                expcVar = lexer.getNextToken();
+            } funcDefPtr->setLocVarNum(idxNum);
+
+            Token expcRbrace = lexer.getNextToken();
+            while (expcRbrace.tkType != RBRACE) {
+                statement* statPtr = parseNotDefStat();
+                funcDefPtr->addStatment(statPtr);
+                expcRbrace = lexer.getNextToken();
+            }
+
+            lexer.clearTokenBuffer();
+            return funcDefPtr;
         }
     }
     RaiseErr(WRONG_GRAMMAR, "'def'", firstTk.nameItself());
@@ -108,10 +125,10 @@ statement* Parser::parseFuncDef()
 statement* Parser::parseVarDef()
 {
     Token firstTk = lexer.getNextToken();
-    if (firstTk.tkType != IDENTIFIER || strcmp(firstTk.idName, "var")) { // 变量定义语句
+    if (eqID(firstTk, "var")) { // 变量定义语句
     Token expectedVarName = lexer.getTk_ensureType(IDENTIFIER);
     lexer.getTk_ensureType(SEMICOLON);
-    return new var_definition(expectedVarName.idName);
+    return new var_declaration(expectedVarName.idName);
     }
     RaiseErr(WRONG_GRAMMAR, "'var'", firstTk.nameItself());
     return nullptr;
@@ -127,7 +144,7 @@ statement* Parser::parseNotDefStat() // 读取分析不是变量声明/函数定
             lexer.getNxtTk_ensureType(RBRACKET); // 拿右括号
             statement* ifBranch = parseNotDefStat(); // if分支
             Token expectedElse = lexer.getNextToken(); 
-            if (expectedElse.tkType != IDENTIFIER || strcmp(expectedElse.idName, "else")) {
+            if (!eqID(expectedElse.idName, "else")) {
                 statement* elseBranch = new voidStat;
                 return new ifStat(condExpr, ifBranch, elseBranch); // 后置条件：在TokenBuffer里面留下一个非else的Token
             }
@@ -153,24 +170,22 @@ statement* Parser::parseNotDefStat() // 读取分析不是变量声明/函数定
             return new inputStat(expcIdTk.idName);
         }
         if (!(strcmp(firstTk.idName, "return"))) { // 返回语句
-
+            expression* expr = parseTresExpr();
+            lexer.getNxtTk_ensureType(SEMICOLON);
+            return new returnStat(expr);
         }
         Token SecondTk = lexer.getToken();
         if (SecondTk.tkType == LBRACKET) {
             lexer.getTk_ensureType(RBRACKET);
             lexer.getTk_ensureType(SEMICOLON);
-            auto it = funcList.find(firstTk.idName);
-            if (it == funcList.end()) RaiseErr(UNDEFINED_FUNC, firstTk.idName);
-            return new funcCall(firstTk.idName); int x = UNFINISHED;
+            return new funcCall(firstTk.idName);
         }
         if (SecondTk.tkType == EVA) {
-            auto it = varMap.find(firstTk.idName);
-            if (it == varMap.end()) RaiseErr(UNDEFINED_VAR, firstTk.idName);
             expression* expr = parseTresExpr();
             lexer.getNxtTk_ensureType(SEMICOLON);
             return new assignment(expr, firstTk.idName);
         }
-        RaiseErr(WRONG_GRAMMAR, "wrong input, neither function call, nor variable assignment. ");
+        RaiseErr(WRONG_GRAMMAR, "wrong input, neither function call, nor variable assignment, but found " + SecondTk.nameItself() + " after " + firstTk.nameItself());
     }
     else if (firstTk.tkType == LBRACE) {
         lexer.clearTokenBuffer();
@@ -182,82 +197,13 @@ statement* Parser::parseNotDefStat() // 读取分析不是变量声明/函数定
         lexer.clearTokenBuffer(); // 后置条件：TokenBuffer置空
         return compoundStatPtr;
     }
-    RaiseErr(WRONG_GRAMMAR, "statement identifiers or '{'", firstTk.nameItself());
+    else if (firstTk.tkType == SEMICOLON) {
+        lexer.clearTokenBuffer();
+        return new voidStat;
+    }
+    RaiseErr(WRONG_GRAMMAR, "statements or Lbrace or semicolon", firstTk.nameItself());
     return nullptr;
 }
-
-int unoExp::evaluate()
-{
-    if (this->op == NONEOP) return Opnd->evaluate();
-    if (this->op == MINUS) return -Opnd->evaluate();
-    if (this->op == NOT) return !(Opnd->evaluate());
-    ASSERT(0);
-    return 0;
-}
-
-unoExp::~unoExp()
-{
-    delete this->Opnd;
-}
-
-int dosExp::evaluate()
-{
-    if (this->op == PLUS) return ((lOpnd->evaluate()) + (rOpnd->evaluate()));
-    if (this->op == MINUS) return ((lOpnd->evaluate()) - (rOpnd->evaluate()));
-    if (this->op == TIMES) return ((lOpnd->evaluate()) * (rOpnd->evaluate()));
-    if (this->op == DIVIDEBY) return ((lOpnd->evaluate()) / (rOpnd->evaluate()));
-    if (this->op == MODULUS) return ((lOpnd->evaluate()) % (rOpnd->evaluate()));
-    if (this->op == EQUAL) return ((lOpnd->evaluate()) == (rOpnd->evaluate()));
-    if (this->op == GREATER) return ((lOpnd->evaluate()) > (rOpnd->evaluate()));
-    if (this->op == LESS) return ((lOpnd->evaluate()) < (rOpnd->evaluate()));
-    if (this->op == AND) return ((lOpnd->evaluate()) && (rOpnd->evaluate()));
-    if (this->op == OR) return ((lOpnd->evaluate()) || (rOpnd->evaluate()));
-    ASSERT(0); // unknown operator in dosExp.
-    return 0;
-}
-
-dosExp::~dosExp()
-{
-    delete this->lOpnd;
-    delete this->rOpnd;
-}
-
-int tresExp::evaluate()
-{
-    if(Opnd1->evaluate()) return Opnd2->evaluate(); 
-    return Opnd3->evaluate(); 
-}
-
-tresExp::~tresExp()
-{
-    delete this->Opnd1;
-    delete this->Opnd2;
-    delete this->Opnd3;
-}
-
-baseExp::baseExp(Token _tk)
-{
-    ASSERT(_tk.tkType == IDENTIFIER || _tk.tkType == INTEGER);
-    baseTk = _tk;
-}
-
-int baseExp::evaluate()
-{
-    ASSERT(this->baseTk.tkType == IDENTIFIER || this->baseTk.tkType == INTEGER);
-    if (this->baseTk.tkType == IDENTIFIER) {
-        auto it = varMap.find(baseTk.idName);
-        if (it == varMap.end()) varMap[baseTk.idName] = 0; //! 没找到就分配为0，后面得改！！！
-        return varMap[baseTk.idName];
-    }
-    if (this->baseTk.tkType == INTEGER) {
-        return this->baseTk.intValue;
-    }
-    return 0;
-}
-
-baseExp::~baseExp() {}
-
-expression::~expression() {}
 
 inline bool isL0op(const Token& _tk) { // - !
     return (_tk.tkType == OPERATOR) && (_tk.opType == MINUS || _tk.opType == NOT);
@@ -282,44 +228,3 @@ inline bool isL6op(const Token& _tk) { // ||
 }
 
 judgeOpFP judgeFuncList[] = {isL0op, isL1op, isL2op, isL3op, isL4op, isL5op, isL6op};
-
-void func_definition::execute()
-{
-}
-
-void var_definition::execute()
-{
-}
-
-void ifStat::execute()
-{
-}
-
-void whileStat::execute()
-{
-}
-
-void compoundStat::addStatement(statement *_statPtr)
-{
-    statList.push_back(_statPtr);
-}
-
-void compoundStat::execute()
-{
-}
-
-void inputStat::execute()
-{
-}
-
-void returnStat::execute()
-{
-}
-
-void voidStat::execute()
-{
-}
-
-void funcCall::execute()
-{
-}

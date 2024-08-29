@@ -1,0 +1,16 @@
+var x;
+
+def tst() {
+    var tmp;
+    tmp = x + 1;
+    output tmp + 1;
+    return 1;
+}
+
+def main() {
+    input x;
+    tst();
+}
+
+main();
+5

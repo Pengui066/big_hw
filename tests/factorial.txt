@@ -1,0 +1,20 @@
+var global;
+
+def factorial(){
+    var tmp;
+    if(global==0){
+        return 1;
+    }else{
+        tmp = global;
+        global = global - 1;
+        return factorial()*tmp;
+    }
+}
+input global;
+5
+output factorial();
+
+def main(){
+    input global;
+    output factorial();
+}

@@ -1,7 +1,11 @@
 ## VER 4
 CXX = g++
 TARGET = main
-SRC = $(wildcard *.cpp)
+SOURCEDIRS = src
+
+FIXPATH = $(subst /,\,$1)
+
+SRC		:= $(wildcard $(patsubst %,%/*.cpp, $(SOURCEDIRS))) 
 OBJ = $(SRC:.cpp=.o)
 
 CXXFLAGS = -g -Wall
@@ -14,4 +18,4 @@ $(TARGET): $(OBJ)
 
 .PHONY: clean
 clean:
-	del *.o main.exe
+	del $(call FIXPATH,$(OBJ)) main.exe
